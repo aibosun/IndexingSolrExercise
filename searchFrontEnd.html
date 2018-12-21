@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Solr Query</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+
+<script language="Javascript">
+
+function xmlhttpPost(strURL) {
+   
+    var xmlHttpReq = false;
+    var self = this;
+    if (window.XMLHttpRequest) { // Mozilla/Safari
+        self.xmlHttpReq = new XMLHttpRequest();
+    }
+    else if (window.ActiveXObject) { // IE
+        self.xmlHttpReq = new ActiveXObject("Microsoft.XMLHTTP");
+    }
+   
+    self.xmlHttpReq.open('POST', strURL, true);
+    self.xmlHttpReq.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+    
+   
+    self.xmlHttpReq.onreadystatechange = function() {
+        if (self.xmlHttpReq.readyState == 4) {
+             updatepage(self.xmlHttpReq.responseText);
+        }
+    };
+
+   var params = getstandardargs().concat(getquerystring());
+   var strData = params.join('&');
+   self.xmlHttpReq.send(strData);
+}
+
+
+function getstandardargs() {
+    var params = [
+        'wt=json'
+        , 'indent=on'
+        , 'hl=true'
+        , 'hl.fl=name,features'
+        ];
+
+    return params;
+}
+function getquerystring() {
+  var form = document.forms['f1'];
+  var query = form.query.value;
+  var sortby = form.sortby.value;
+  var qstr="q=";
+ if(sortby=="def"){
+     qstr= qstr + escape(query);
+ }else if(sortby=="pagerank"){
+    qstr = qstr + escape(query)+"&sort=pageRankFile desc";
+}
+  return qstr;
+}
+
+function updatepage(str){
+  
+    var rsp = eval("("+str+")"); // use eval to parse Solr's JSON response
+    var documents = rsp.response.docs;
+
+    var html= "";
+    for(var i=0;i<documents.length;i++){
+        var urlVal = documents[i].og_url;
+        var urlReal=documents[i].og_url;
+        if(typeof(documents[i].og_url)=="undefined"){
+            urlReal="NA";
+            urlVal="#";
+          
+        }
+        html= html+"<div style='border:1px solid black;'><table style='font-size:11px;width:100%'>"
+                  +"<tr><th width='150px;'>#"+(i+1)+":Title</th><td><a href='"+urlVal+"'>"+documents[i].title+"</a></td></tr>"
+                  +"<tr><th>URL</th><td><a href='"+urlVal+"'>"+urlReal+"</a></td></tr>"
+                  +"<tr><th>ID</th><td>"+documents[i].id+"</td></tr>"
+                  +"<tr><th>Description</th><td>";
+         if(typeof(documents[i].description)!="undefined"){
+                html+=documents[i].description;  
+         }else{
+                html+=" ";  
+         }
+        html+="</td></tr></table></div>";
+    }
+    document.getElementById("result").innerHTML = html;
+    
+}
+
+</script>
+</head>
+<body>
+
+<form name="f1" onsubmit='xmlhttpPost("http://localhost:8983/solr/mySolarCore/select"); return false;'>
+  <center><p>
+     <input type="radio" name="sortby" value="def" checked/>Defalt-Lucene
+      <input type="radio" name="sortby" value="pagerank"/>PageRank
+           Query: <input name="query" value="" type="text">
+  <input value="Search" type="submit"></p>
+<pre>Results Table: <br/></pre></center>
+<div id="result"></div>
+</form>
+
+</body>
+</html>
